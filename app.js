@@ -15,6 +15,8 @@ var http = require('http');
 var path = require('path');
 var net = require('net');
 var dgram = require('dgram');
+var http = require('http');
+
 
 var app = express();
 
@@ -44,34 +46,45 @@ http.createServer(app).listen(app.get('port'), function(){
 
 findCard();
 
+function enableShootAndView() {
 
 
-function pingCard() {
 
-	var client = new net.Socket();
-	client.connect(0, cardAddr, function() {
-		client.write('ping');
+}
+
+function pingCard(ip) {
+
+	req = http.get('http://'+ip+'/', function(res) {
+		console.log('Card is alive!');
+		req.destroy();
 	});
 	
-	client.setTimeout(5000, function(data) {
-		console.log('TIMEOUT');
+	req.on('error', function(err) {
+		cardFound = false;
+		//console.log('ERROR: ' + err);
+		req.destroy();
 		clearInterval(itvPing);
+		findCard();
 	});
 	
-	client.on('error', function(err) {
-		console.log('ERRROR: ' + err);
+	req.setTimeout(5000, function(data) {
+		cardFound = false;
+		console.log('Card has disappeared!');
+		req.destroy();
 		clearInterval(itvPing);
-		client.destroy();
-	});
-	
-	client.on('data', function(data) {
-		console.log('DATA: ' + data);
-		client.destroy();
+		findCard();
 	});
 	
 }
 
+var alreadySearching = false;
+
 function findCard() {
+
+	if(alreadySearching == true)
+		return;
+	else
+		alreadySearching = true;
 
 	var socket = dgram.createSocket('udp4');
 	var message = new Buffer('dummy');
@@ -87,25 +100,25 @@ function findCard() {
 	});
 
 	socket.on('message', function (msg, rinfo) {
-		//console.log("socket got: " + msg + " from " + rinfo.address + ":" + rinfo.port);
 		clearInterval(itvSearch);
 		socket.close();
 		msg = msg.toString();
 		cardAddr = msg.match(/ip=(.*)/)[1];
 		cardFound = true;
 		itvPing = setInterval(function() {
-			pingCard();
+			pingCard(cardAddr);
 		}, 5000);
 		console.log("Found card on "+cardAddr);
+		alreadySearching = false;
 	});
 
 	socket.on('listening', function () {
 		var address = socket.address();
-		//console.log("WiPho server listening on " + address.address + ":" + address.port);
 		sendSearch();
 		itvSearch = setInterval(function() {
 			sendSearch();
 		}, 5000);
+		
 		function sendSearch() {
 			console.log("Searching for card...");
 			socket.send(message, 0, message.length, 55777, cardAddr, function(err, bytes) {
@@ -113,6 +126,7 @@ function findCard() {
 					console.log("socket error:\n" + err.stack);
 			});
 		}
+		
 	});
 	
 }
