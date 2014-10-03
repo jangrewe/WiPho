@@ -1,0 +1,13 @@
+body {
+  margin: 0px;
+  padding: 0px;
+}
+
+a {
+  color: #00B7FF;
+}
+
+#latest {
+	max-width: 100%;
+	max-height: 100%;
+}

@@ -1,18 +1,89 @@
 
-var localFolder = "./photos";
-//var username = "admin";
-//var password = "admin";
+var config = require('./config.json');
+
+var pathPhotos = config.pathPhotos;
+var cardAddr = config.broadcastAddr;
+var pathPreviews = "./public/previews";
 
 var itvPing = null;
 var cardFound = false;
 var alreadySearching = false;
-var cardAddr = "192.168.0.255";
 
 var http = require('http');
 var path = require('path');
 var net = require('net');
 var dgram = require('dgram');
 var fs = require('fs');
+var gm = require('gm');
+
+/* Express */
+
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+
+var routes = require('./routes/index');
+var latestPhoto = require('./routes/latest');
+var allPhotos = require('./routes/all');
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+//app.use(favicon(__dirname + '/public/favicon.ico'));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', routes);
+app.use('/latest', latestPhoto);
+app.use('/all', allPhotos);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+    var err = new Error('Not Found');
+    err.status = 404;
+    next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+    app.use(function(err, req, res, next) {
+        res.status(err.status || 500);
+        res.render('error', {
+            message: err.message,
+            error: err
+        });
+    });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+        message: err.message,
+        error: {}
+    });
+});
+
+module.exports = app;
+
+/* WiPho */
+
+photos = new Array();
+photoIndex = 0;
 
 console.log("#########################################");
 console.log("# Make sure you shoot JPEG or RAW+JPEG! #");
@@ -24,10 +95,10 @@ function downloadPhoto(path) {
 
 	path = path.substr(5).replace(/\0/g, '');
 	var photo = path.split('/').pop();
-	var url = 'http://'+cardAddr+path;
-	var localFile = localFolder+'/'+photo;
+	var localFile = pathPhotos+'/'+photo;
+	var localPreview = pathPreviews+'/'+photo;
 	console.log("---");
-	console.log("Downloading "+url);
+	console.log('Downloading http://'+cardAddr+path);
 	
 	var file = fs.createWriteStream(localFile);
 		
@@ -37,8 +108,24 @@ function downloadPhoto(path) {
 	
 	file.on('finish', function() {
 		file.close();
-		console.log('Photo '+photo+' written to '+localFolder+'/'+photo);
-		console.log("---");
+		console.log('Photo '+photo+' written to '+localFile);
+		
+		gm(localFile).autoOrient().resize(1920, 1080).write(localPreview, function (err) {
+			if (!err) {
+				console.log('Photo resized!');						
+				if(photos.length == 0 || photo != photos[photos.length-1].name) {
+					photos.push({id: photoIndex, name: photo});
+					photoIndex++;
+				}
+			
+			}else{
+				console.log('Photo resize error: '+err);
+			}
+			
+			console.log("---");
+			
+		});
+		
 	});
 	
 	var options = {
