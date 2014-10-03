@@ -1,73 +1,105 @@
 
-var cardAddr = "192.168.0.255";
+var localFolder = "./photos";
+//var username = "admin";
+//var password = "admin";
+
+var itvPing = null;
 var cardFound = false;
+var alreadySearching = false;
+var cardAddr = "192.168.0.255";
 
-var itvPing;
-
-/**
- * Module dependencies.
- */
-
-var express = require('express');
-var routes = require('./routes');
-var user = require('./routes/user');
 var http = require('http');
 var path = require('path');
 var net = require('net');
 var dgram = require('dgram');
-var http = require('http');
+var fs = require('fs');
 
-
-var app = express();
-
-// all environments
-app.set('port', process.env.PORT || 3000);
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
-app.use(express.favicon());
-app.use(express.logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded());
-app.use(express.methodOverride());
-app.use(app.router);
-app.use(express.static(path.join(__dirname, 'public')));
-
-// development only
-if ('development' == app.get('env')) {
-  app.use(express.errorHandler());
-}
-
-app.get('/', routes.index);
-app.get('/users', user.list);
-
-http.createServer(app).listen(app.get('port'), function(){
-  console.log('Express server listening on port ' + app.get('port'));
-});
+console.log("#########################################");
+console.log("# Make sure you shoot JPEG or RAW+JPEG! #");
+console.log("#########################################");
 
 findCard();
 
-function enableShootAndView() {
+function downloadPhoto(path) {
 
-
+	path = path.substr(5).replace(/\0/g, '');
+	var photo = path.split('/').pop();
+	var url = 'http://'+cardAddr+path;
+	var localFile = localFolder+'/'+photo;
+	console.log("---");
+	console.log("Downloading "+url);
+	
+	var file = fs.createWriteStream(localFile);
+		
+	file.on('error', function(err) {
+		console.log("FS: "+err);
+	});
+	
+	file.on('finish', function() {
+		file.close();
+		console.log('Photo '+photo+' written to '+localFolder+'/'+photo);
+		console.log("---");
+	});
+	
+	var options = {
+		hostname: cardAddr,
+		port: 80,
+		path: path,
+		method: 'GET'
+	};
+	
+	var request = http.get(options, function(response) {
+	  response.pipe(file);
+	});
+	
+	request.on('error', function(e) {
+		console.log("HTTP Error: " + e.message);
+	});
 
 }
+
+
+function enableShootAndView(ip) {
+
+	var client = net.connect({port: 5566, host: ip}, function() {
+		console.log('Enabling Shoot & View...');
+	});
+	
+	client.on('connect', function() {
+		console.log('Shoot & View enabled, waiting for photos...');
+	});
+	
+	client.on('error', function(err) {
+		console.log('Shoot & View error: '+err);
+	});
+	
+	client.on('data', function(data) {
+		downloadPhoto(data.toString());
+	});
+
+	client.on('end', function() {
+		console.log('Shoot & View stopped!');
+	});
+
+}
+
 
 function pingCard(ip) {
 
 	req = http.get('http://'+ip+'/', function(res) {
-		console.log('Card is alive!');
+		//console.log('Card is alive!');
 		req.destroy();
 	});
 	
 	req.on('error', function(err) {
 		cardFound = false;
-		//console.log('ERROR: ' + err);
+		console.log('ERROR: ' + err);
 		req.destroy();
 		clearInterval(itvPing);
 		findCard();
 	});
 	
-	req.setTimeout(5000, function(data) {
+	req.setTimeout(5000, function() {
 		cardFound = false;
 		console.log('Card has disappeared!');
 		req.destroy();
@@ -77,7 +109,6 @@ function pingCard(ip) {
 	
 }
 
-var alreadySearching = false;
 
 function findCard() {
 
@@ -85,6 +116,8 @@ function findCard() {
 		return;
 	else
 		alreadySearching = true;
+		
+	console.log("Searching for card...");
 
 	var socket = dgram.createSocket('udp4');
 	var message = new Buffer('dummy');
@@ -97,6 +130,7 @@ function findCard() {
 	socket.on('error', function (err) {
 		console.log("socket error:\n" + err.stack);
 		socket.close();
+		findCard();
 	});
 
 	socket.on('message', function (msg, rinfo) {
@@ -105,10 +139,11 @@ function findCard() {
 		msg = msg.toString();
 		cardAddr = msg.match(/ip=(.*)/)[1];
 		cardFound = true;
+		console.log("Found card on "+cardAddr);
+		enableShootAndView(cardAddr);
 		itvPing = setInterval(function() {
 			pingCard(cardAddr);
 		}, 5000);
-		console.log("Found card on "+cardAddr);
 		alreadySearching = false;
 	});
 
@@ -120,7 +155,6 @@ function findCard() {
 		}, 5000);
 		
 		function sendSearch() {
-			console.log("Searching for card...");
 			socket.send(message, 0, message.length, 55777, cardAddr, function(err, bytes) {
 				if(err != null)
 					console.log("socket error:\n" + err.stack);
