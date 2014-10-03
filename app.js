@@ -2,6 +2,8 @@
 var config = require('./config.json');
 
 var pathPhotos = config.pathPhotos;
+var previewWidth = config.previewWidth;
+var previewHeight = config.previewHeight;
 var cardAddr = config.broadcastAddr;
 var pathPreviews = "./public/previews";
 
@@ -97,8 +99,7 @@ function downloadPhoto(path) {
 	var photo = path.split('/').pop();
 	var localFile = pathPhotos+'/'+photo;
 	var localPreview = pathPreviews+'/'+photo;
-	console.log("---");
-	console.log('Downloading http://'+cardAddr+path);
+	console.log('['+photo+'] Downloading from http://'+cardAddr+path);
 	
 	var file = fs.createWriteStream(localFile);
 		
@@ -108,11 +109,11 @@ function downloadPhoto(path) {
 	
 	file.on('finish', function() {
 		file.close();
-		console.log('Photo '+photo+' written to '+localFile);
+		console.log('['+photo+'] Saved as '+localFile);
 		
-		gm(localFile).autoOrient().resize(1920, 1080).write(localPreview, function (err) {
+		gm(localFile).autoOrient().resize(previewWidth, previewHeight).write(localPreview, function (err) {
 			if (!err) {
-				console.log('Photo resized!');						
+				console.log('['+photo+'] Resized to '+previewWidth+'x'+previewHeight);						
 				if(photos.length == 0 || photo != photos[photos.length-1].name) {
 					photos.push({id: photoIndex, name: photo});
 					photoIndex++;
@@ -121,8 +122,6 @@ function downloadPhoto(path) {
 			}else{
 				console.log('Photo resize error: '+err);
 			}
-			
-			console.log("---");
 			
 		});
 		
