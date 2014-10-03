@@ -158,6 +158,7 @@ function enableShootAndView(ip) {
 	
 	client.on('error', function(err) {
 		console.log('Shoot & View error: '+err);
+		findCard();
 	});
 	
 	client.on('data', function(data) {
