@@ -5,12 +5,17 @@ var pathPhotos = config.pathPhotos;
 var previewWidth = config.previewWidth;
 var previewHeight = config.previewHeight;
 var cardAddr = config.broadcastAddr;
-var pathPreviews = "./public/previews";
+var cardPath = null;
+var pathPreviews = './public/previews';
 
 var itvPing = null;
 var cardFound = false;
 var alreadySearching = false;
+var alreadyDownloading = false;
+var downloadPrevious = true;
+var downloadList = new Array();
 
+var os = require('os');
 var http = require('http');
 var path = require('path');
 var net = require('net');
@@ -39,7 +44,7 @@ app.set('view engine', 'jade');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(__dirname + '/public/favicon.ico'));
-app.use(logger('dev'));
+//app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -93,13 +98,16 @@ console.log("#########################################");
 
 findCard();
 
-function downloadPhoto(path) {
+function downloadPhotos() {
 
-	path = path.substr(5).replace(/\0/g, '');
-	var photo = path.split('/').pop();
+	if(alreadyDownloading == true || downloadList.length < 1)
+		return true;
+		
+	alreadyDownloading = true;
+	var photo = downloadList.pop();
 	var localFile = pathPhotos+'/'+photo;
 	var localPreview = pathPreviews+'/'+photo;
-	console.log('['+photo+'] Downloading from http://'+cardAddr+path);
+	console.log('['+photo+'] Downloading from http://'+cardAddr+cardPath+'/'+photo);
 	
 	var file = fs.createWriteStream(localFile);
 		
@@ -109,6 +117,7 @@ function downloadPhoto(path) {
 	
 	file.on('finish', function() {
 		file.close();
+		alreadyDownloading = false;
 		console.log('['+photo+'] Saved as '+localFile);
 		
 		gm(localFile).autoOrient().resize(previewWidth, previewHeight).write(localPreview, function (err) {
@@ -124,13 +133,23 @@ function downloadPhoto(path) {
 			}
 			
 		});
+
+		if(downloadPrevious == true) {
+			getPhotoList();
+		}
+		
+		if(downloadList.length > 0) {
+			downloadPhotos();
+		}else{
+			console.log("All photos downloaded, waiting for new ones...");
+		}
 		
 	});
 	
 	var options = {
 		hostname: cardAddr,
 		port: 80,
-		path: path,
+		path: cardPath+'/'+photo,
 		method: 'GET'
 	};
 	
@@ -144,6 +163,52 @@ function downloadPhoto(path) {
 
 }
 
+function getPhotoList() {
+
+	downloadPrevious = false;
+
+	var options = {
+		host: cardAddr,
+		port: 80,
+		path: '/cgi-bin/tslist?PATH=/www'+cardPath+'&keepfresh='+Date.now().toString()
+	};
+
+	http.get(options, function(resp){
+		console.log("Getting list of photos on card...");
+		resp.on('data', function(data){
+			var strFiles = data.toString().split(os.EOL)[2];
+			var regex = /FileName\d+=([a-zA-Z0-9_\.]+)&FileType\d+=File&/g;
+			var arrPhotos = new Array();
+			while (match = regex.exec(strFiles)) {
+				arrPhotos.push(match[1]);
+			}
+			var i = 0;
+			arrPhotos.forEach(function(photo) {
+				fs.exists(pathPhotos+'/'+photo, function(exists) {
+					if (exists) {
+						//console.log('['+photo+'] Photo '+photo+' already downloaded!');
+					}else{
+						console.log('['+photo+'] Photo '+photo+' not downloaded yet, adding to download list!');
+						downloadList.push(photo);
+					}
+					i++;
+					if(i == arrPhotos.length-1) {
+						if(downloadList.length > 0) {
+							downloadPhotos();
+						}else{
+							console.log("All photos already downloaded!");
+						}
+					}
+				});
+			});
+		});
+	}).on("error", function(e){
+		console.log("Error getting photo list: " + e.message);
+		getPhotoList();
+	});
+
+}
+
 
 function enableShootAndView(ip) {
 
@@ -153,6 +218,9 @@ function enableShootAndView(ip) {
 	
 	client.on('connect', function() {
 		console.log('Shoot & View enabled, waiting for photos...');
+		if(cardPath != null) {
+			getPhotoList();
+		}
 	});
 	
 	client.on('error', function(err) {
@@ -161,7 +229,11 @@ function enableShootAndView(ip) {
 	});
 	
 	client.on('data', function(data) {
-		downloadPhoto(data.toString());
+		var path = data.toString().substr(5).replace(/\0/g, '');
+		var photo = path.split('/').pop();
+		cardPath = path.substring(0, path.lastIndexOf('/'));
+		downloadList.push(photo);
+		downloadPhotos();
 	});
 
 	client.on('end', function() {
@@ -188,6 +260,7 @@ function pingCard(ip) {
 	
 	req.setTimeout(5000, function() {
 		cardFound = false;
+		downloadPrevious = true;
 		console.log('Card has disappeared!');
 		req.destroy();
 		clearInterval(itvPing);
@@ -239,7 +312,7 @@ function findCard() {
 		sendSearch();
 		itvSearch = setInterval(function() {
 			sendSearch();
-		}, 5000);
+		}, 2000);
 		
 		function sendSearch() {
 			socket.send(message, 0, message.length, 55777, cardAddr, function(err, bytes) {
