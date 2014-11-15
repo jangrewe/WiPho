@@ -38,6 +38,15 @@ var allPhotos = require('./routes/all');
 
 var app = express();
 
+process.title = 'WiPho';
+var gracefulShutdown = function() {
+  console.log("Shutting down...");
+  process.exit();
+}
+
+process.on ('SIGTERM', gracefulShutdown);
+process.on ('SIGINT', gracefulShutdown);   
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
