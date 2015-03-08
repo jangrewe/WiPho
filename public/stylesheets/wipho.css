@@ -1,6 +1,9 @@
 body {
+  overflow:hidden;
   margin: 0px;
   padding: 0px;
+  background-color: #000000;
+  background-image: url("../images/bg.png");
 }
 
 a {
@@ -8,6 +11,14 @@ a {
 }
 
 #latest {
-	max-width: 100%;
-	max-height: 100%;
+  margin-top: -0.5%;
+	max-width: 93%;
+	max-height: 93%;
+}
+
+.imgBorder {
+  border: solid 5px #222;
+  -moz-box-shadow: 5px 5px 15px #000;
+  -webkit-box-shadow: 5px 5px 15px #000;
+  box-shadow: 5px 5px 15px #000;
 }
