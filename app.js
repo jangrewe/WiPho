@@ -1,4 +1,3 @@
-
 var config = require('./config.json');
 
 var pathPhotos = config.pathPhotos;
