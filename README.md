@@ -5,6 +5,8 @@ When it detects that a photo was taken, it will download that photo to a specifi
 
 The app also features a simple but functional web interface that will display the last photo taken, e.g. for live previewing during a photo shooting.
 
+![ubvg6](https://cloud.githubusercontent.com/assets/126137/6565612/98e8c9ce-c6b1-11e4-89a8-b6e17e2e4f13.jpg)
+
 ## Usage
 - Make sure you have Node.js and NPM installed
 - Copy ```config.json-dist``` to ```config.js``` and edit it to your needs
