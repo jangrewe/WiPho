@@ -3,5 +3,5 @@
   "previewWidth"  : 1920,
   "previewHeight" : 1080,
   "httpPort"      : 80,
-  "broadcastAddr" : "192.168.0.255",
+  "broadcastAddr" : "192.168.0.255"
 }
