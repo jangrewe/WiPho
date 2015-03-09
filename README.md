@@ -10,3 +10,8 @@ This Node.js app searches your Transcend Wifi SD and waits for photos to be take
 - Open a browser and access ```http://127.0.0.1:80``` (replace IP and port according to your changes)
 
 If your Wifi SD is on the same network as the one detected/configured, you should see that the card is found and the app is waiting for photos to be taken.
+
+## Troubleshooting
+- Tested on Debian (jessie) with Node.js v0.10.32
+- If you card is not found, make sure it is connected to the same subnet as the machine running this app
+- If you don't know your "broadcast address", remove that line 'broadcastAddr' from config.json check if the right address is detected
