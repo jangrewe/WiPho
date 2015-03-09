@@ -1,12 +1,10 @@
+
+var socket = io.connect();
+
 $(document).ready(function() {
 
   $('body').height($(window).height());
   centerImage();
-
-  getLatest();
-  setInterval(function() {
-    getLatest();
-  }, 1000);
 
   $(window).resize(function () {
     centerImage();
@@ -22,18 +20,15 @@ $(document).ready(function() {
     centerImage();
     $(this).animate({opacity: 1}, 400);
   });
-  
-});
 
-function getLatest() {
-  $.getJSON('/latest', function(data) {
-    if('/previews/'+data.name != $('#latest').attr('src')) {
-      $('#latest').animate({opacity: 0}, 400, function() {
-        $(this).attr('src', '/previews/'+data.name);
-      });
-    }
+  socket.on('photo', function (data) {
+    $('#latest').animate({opacity: 0}, 400, function() {
+      $(this).attr('src', '/previews/'+data.path);
+      socket.emit('display', {status: 'success'});
+    });
   });
-}
+
+});
 
 function centerImage() {
   $('#latest').css({
