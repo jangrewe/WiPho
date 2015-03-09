@@ -3,7 +3,6 @@ var config = require('./config.json');
 var pathPhotos = config.pathPhotos;
 var previewWidth = config.previewWidth;
 var previewHeight = config.previewHeight;
-var cardAddr = config.broadcastAddr;
 var cardPath = null;
 var pathPreviews = './public/previews';
 
@@ -15,6 +14,7 @@ var downloadPrevious = true;
 var downloadList = new Array();
 
 var os = require('os');
+var ip = require('ip');
 var http = require('http');
 var path = require('path');
 var net = require('net');
@@ -35,6 +35,12 @@ var io = require('socket.io')(server);
 var routes = require('./routes/index');
 var latestPhoto = require('./routes/latest');
 var allPhotos = require('./routes/all');
+
+var cardAddr = ip.subnet(ip.address(), '255.255.255.0').broadcastAddress;
+
+if (typeof config.broadcastAddr !== undefined) {
+  cardAddr = config.broadcastAddr;
+}
 
 process.title = 'WiPho';
 var gracefulShutdown = function() {
