@@ -1,7 +1,7 @@
 {
-  "pathPhotos"		: "/path/to/photos/folder",
-  "previewWidth"	: 1920,
-  "previewHeight"	: 1080,
-  "broadcastAddr"	: "192.168.0.255",
-  "httpPort"      : 3080
+  "pathPhotos"    : "/path/to/photos/folder",
+  "previewWidth"  : 1920,
+  "previewHeight" : 1080,
+  "broadcastAddr" : "192.168.0.255",
+  "httpPort"      : 80
 }
