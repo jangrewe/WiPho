@@ -12,7 +12,7 @@ The app also features a simple but functional web interface that will display th
 - Copy ```config.json-dist``` to ```config.js``` and edit it to your needs
 - Run ```npm install```
 - Start with ```npm start```
-- Open a browser and access ```http://127.0.0.1:80``` (replace IP and port according to your configuration changes)
+- Open a browser and access ```http://127.0.0.1:3000``` (replace IP and port according to your configuration changes)
 
 If your Wifi SD is on the same network as the one detected/configured, you should see that the card is found and the app is waiting for photos to be taken.
 
